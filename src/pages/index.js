@@ -10,8 +10,7 @@ export default function Home() {
   const [isAIPopupOpen, setIsAIPopupOpen] = useState(false);
   const [isPermissionGranted, setIsPermissionGranted] = useState(false);
   
-  // Ref to track last physical orientation to avoid duplicate alerts
-  const lastPhysicalOrientation = useRef("");
+  // No manual ref needed, using closure-based flag in useEffect
 
   useEffect(() => {
     if (typeof window !== "undefined" && screen.orientation) {
@@ -31,31 +30,42 @@ export default function Home() {
   useEffect(() => {
     if (!isLocked || !isPermissionGranted) return;
 
+    // Track if we are currently showing an alert state
+    let isAlerting = false;
+
     const handleDeviceOrientation = (event) => {
-      // beta is front-to-back tilt [-180, 180]
-      // gamma is left-to-right tilt [-90, 90]
       const { beta, gamma } = event;
       
       let currentPhysical = "";
-      // Simplified heuristic for physical orientation
-      if (Math.abs(beta) > 45 && Math.abs(beta) < 135) {
+      // Sensitivity threshold (degrees)
+      const THRESHOLD = 50;
+
+      // Detect physical landscape vs portrait
+      if (Math.abs(beta) > THRESHOLD && Math.abs(beta) < (180 - THRESHOLD)) {
         currentPhysical = "portrait";
-      } else if (Math.abs(gamma) > 45) {
+      } else if (Math.abs(gamma) > THRESHOLD) {
         currentPhysical = "landscape";
       }
 
-      // If we are locked, and physical orientation changes to something else
-      // than the locked logical orientation, trigger alert.
-      if (currentPhysical && currentPhysical !== lastPhysicalOrientation.current) {
+      if (currentPhysical) {
         const isCurrentlyPortrait = orientation.includes("portrait");
         const physicalIsPortrait = currentPhysical === "portrait";
 
+        // If physical doesn't match logical lock
         if (isCurrentlyPortrait !== physicalIsPortrait) {
-          setRotationAttempt(true);
-          setIsAIPopupOpen(true);
-          setTimeout(() => setRotationAttempt(false), 3000);
+          // If we haven't alerted for THIS specific tilt yet
+          if (!isAlerting) {
+            setRotationAttempt(true);
+            setIsAIPopupOpen(true);
+            isAlerting = true;
+            // The popup/inline alert visual will stay for a bit
+            setTimeout(() => setRotationAttempt(false), 3000);
+          }
+        } else {
+          // Device physically returned to the correct (locked) orientation
+          // We reset the alerting flag so it can trigger again on next tilt
+          isAlerting = false;
         }
-        lastPhysicalOrientation.current = currentPhysical;
       }
     };
 
