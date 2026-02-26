@@ -17,6 +17,7 @@ export default function Home() {
         setOrientation(screen.orientation.type);
         if (isLocked) {
           setRotationAttempt(true);
+          setIsAIPopupOpen(true);
           setTimeout(() => setRotationAttempt(false), 2000);
         }
       };
@@ -67,7 +68,7 @@ export default function Home() {
         setError("Failed to unlock orientation.");
       }
     }
-    setIsAIPopupOpen(true);
+    // Popup now only triggers in handleOrientationChange when locked
   };
 
   const getOrientationIcon = () => {
@@ -151,7 +152,7 @@ export default function Home() {
         <div className={`transition-all duration-500 transform ${rotationAttempt ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'}`}>
           <div className="bg-orange-500/20 border border-orange-500/50 backdrop-blur-md text-orange-400 px-6 py-3 rounded-full inline-flex items-center gap-2">
             <RotateCw className="w-4 h-4 animate-spin-slow" />
-            <span className="font-semibold text-sm italic">Somebody is trying to rotate!</span>
+            <span className="font-semibold text-sm italic">rotation attempt when locked</span>
           </div>
         </div>
 
@@ -171,13 +172,13 @@ export default function Home() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all duration-300" onClick={() => setIsAIPopupOpen(false)}>
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl max-w-xs w-full shadow-2xl animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center">
-                <AlertCircle className="text-white w-6 h-6" />
+              <div className="w-10 h-10 rounded-xl bg-orange-600 flex items-center justify-center shadow-[0_0_15px_rgba(234,88,12,0.5)]">
+                <RotateCw className="text-white w-6 h-6 animate-spin-slow" />
               </div>
-              <h3 className="font-bold text-lg">Action Recorded</h3>
+              <h3 className="font-bold text-lg">Alert</h3>
             </div>
             <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
-              The orientation lock state has been toggled.
+              rotation attempt when locked
             </p>
             <button 
               onClick={() => setIsAIPopupOpen(false)}
