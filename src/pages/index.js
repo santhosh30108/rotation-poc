@@ -115,8 +115,6 @@ export default function Home() {
           const currentType = screen.orientation.type;
           await screen.orientation.lock(currentType);
           setIsLocked(true);
-          // Set initial physical orientation to match logical
-          lastPhysicalOrientation.current = currentType.includes("portrait") ? "portrait" : "landscape";
           console.log(`✅ Screen locked to ${currentType}!`);
         } else {
           throw new Error("Orientation lock not supported on this browser.");
