@@ -36,9 +36,11 @@ export default function Home() {
         }
         
         if (screen.orientation && screen.orientation.lock) {
-          await screen.orientation.lock("portrait");
+          // Lock to whatever the current orientation type is
+          const currentType = screen.orientation.type;
+          await screen.orientation.lock(currentType);
           setIsLocked(true);
-          console.log("✅ Screen locked!");
+          console.log(`✅ Screen locked to ${currentType}!`);
         } else {
           throw new Error("Orientation lock not supported on this browser.");
         }
@@ -129,7 +131,7 @@ export default function Home() {
             ) : (
               <>
                 <Unlock className="w-5 h-5" />
-                <span>Lock to Portrait</span>
+                <span>Lock Orientation</span>
               </>
             )}
             
@@ -164,7 +166,7 @@ export default function Home() {
         </footer>
       </main>
 
-      {/* Simple AI Popup simulation */}
+      {/* Simplified Action Popup */}
       {isAIPopupOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all duration-300" onClick={() => setIsAIPopupOpen(false)}>
           <div className="bg-zinc-900 border border-zinc-800 p-6 rounded-3xl max-w-xs w-full shadow-2xl animate-in fade-in zoom-in duration-300" onClick={e => e.stopPropagation()}>
@@ -175,7 +177,7 @@ export default function Home() {
               <h3 className="font-bold text-lg">Action Recorded</h3>
             </div>
             <p className="text-zinc-400 text-sm mb-6 leading-relaxed">
-              The orientation lock state has been toggled. This event can be used to trigger AI assistance or session logging.
+              The orientation lock state has been toggled.
             </p>
             <button 
               onClick={() => setIsAIPopupOpen(false)}
