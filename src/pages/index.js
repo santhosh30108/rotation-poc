@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Head from "next/head";
 import { Lock, Unlock, RotateCw, Monitor, Tablet, Smartphone, AlertCircle } from "lucide-react";
 
@@ -8,6 +8,10 @@ export default function Home() {
   const [rotationAttempt, setRotationAttempt] = useState(false);
   const [error, setError] = useState("");
   const [isAIPopupOpen, setIsAIPopupOpen] = useState(false);
+  const [isPermissionGranted, setIsPermissionGranted] = useState(false);
+  
+  // Ref to track last physical orientation to avoid duplicate alerts
+  const lastPhysicalOrientation = useRef("");
 
   useEffect(() => {
     if (typeof window !== "undefined" && screen.orientation) {
@@ -15,32 +19,94 @@ export default function Home() {
 
       const handleOrientationChange = () => {
         setOrientation(screen.orientation.type);
-        if (isLocked) {
-          setRotationAttempt(true);
-          setIsAIPopupOpen(true);
-          setTimeout(() => setRotationAttempt(false), 2000);
-        }
+        // Logical orientation change only happens when NOT locked
+        // But we keep this for consistency
       };
 
       screen.orientation.addEventListener("change", handleOrientationChange);
       return () => screen.orientation.removeEventListener("change", handleOrientationChange);
     }
-  }, [isLocked]);
+  }, []);
+
+  useEffect(() => {
+    if (!isLocked || !isPermissionGranted) return;
+
+    const handleDeviceOrientation = (event) => {
+      // beta is front-to-back tilt [-180, 180]
+      // gamma is left-to-right tilt [-90, 90]
+      const { beta, gamma } = event;
+      
+      let currentPhysical = "";
+      // Simplified heuristic for physical orientation
+      if (Math.abs(beta) > 45 && Math.abs(beta) < 135) {
+        currentPhysical = "portrait";
+      } else if (Math.abs(gamma) > 45) {
+        currentPhysical = "landscape";
+      }
+
+      // If we are locked, and physical orientation changes to something else
+      // than the locked logical orientation, trigger alert.
+      if (currentPhysical && currentPhysical !== lastPhysicalOrientation.current) {
+        const isCurrentlyPortrait = orientation.includes("portrait");
+        const physicalIsPortrait = currentPhysical === "portrait";
+
+        if (isCurrentlyPortrait !== physicalIsPortrait) {
+          setRotationAttempt(true);
+          setIsAIPopupOpen(true);
+          setTimeout(() => setRotationAttempt(false), 3000);
+        }
+        lastPhysicalOrientation.current = currentPhysical;
+      }
+    };
+
+    window.addEventListener("deviceorientation", handleDeviceOrientation);
+    return () => window.removeEventListener("deviceorientation", handleDeviceOrientation);
+  }, [isLocked, isPermissionGranted, orientation]);
+
+  const requestOrientationPermission = async () => {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      try {
+        const permission = await DeviceOrientationEvent.requestPermission();
+        if (permission === 'granted') {
+          setIsPermissionGranted(true);
+          return true;
+        } else {
+          setError("Permission for rotation detection was denied.");
+          return false;
+        }
+      } catch (err) {
+        console.error("Error requesting orientation permission:", err);
+        setError("Could not request orientation permission.");
+        return false;
+      }
+    } else {
+      // Non-iOS or older browsers
+      setIsPermissionGranted(true);
+      return true;
+    }
+  };
 
   const toggleLock = async () => {
     setError("");
+    
+    // Request permission on the first lock attempt (needs user gesture)
+    if (!isPermissionGranted) {
+      const granted = await requestOrientationPermission();
+      if (!granted) return;
+    }
+
     if (!isLocked) {
       try {
-        // Essential to request fullscreen for orientation lock on many mobile browsers
         if (document.documentElement.requestFullscreen) {
           await document.documentElement.requestFullscreen();
         }
         
         if (screen.orientation && screen.orientation.lock) {
-          // Lock to whatever the current orientation type is
           const currentType = screen.orientation.type;
           await screen.orientation.lock(currentType);
           setIsLocked(true);
+          // Set initial physical orientation to match logical
+          lastPhysicalOrientation.current = currentType.includes("portrait") ? "portrait" : "landscape";
           console.log(`✅ Screen locked to ${currentType}!`);
         } else {
           throw new Error("Orientation lock not supported on this browser.");
@@ -48,7 +114,6 @@ export default function Home() {
       } catch (err) {
         console.log("❌", err.message);
         setError(err.message || "Failed to lock orientation.");
-        // If fullscreen was entered but lock failed, might want to exit fullscreen
         if (document.fullscreenElement) {
           document.exitFullscreen().catch(() => {});
         }
@@ -68,7 +133,6 @@ export default function Home() {
         setError("Failed to unlock orientation.");
       }
     }
-    // Popup now only triggers in handleOrientationChange when locked
   };
 
   const getOrientationIcon = () => {
