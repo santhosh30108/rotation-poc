@@ -27,6 +27,22 @@ export default function Home() {
     }
   }, []);
 
+  // Handle auto-unlock when exiting fullscreen
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement && isLocked) {
+        if (screen.orientation && screen.orientation.unlock) {
+          screen.orientation.unlock();
+        }
+        setIsLocked(false);
+        console.log("🔓 Screen auto-unlocked on fullscreen exit!");
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, [isLocked]);
+
   useEffect(() => {
     if (!isLocked || !isPermissionGranted) return;
 
