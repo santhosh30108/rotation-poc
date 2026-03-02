@@ -17,7 +17,9 @@ export default function Home() {
     if (typeof window !== "undefined") {
       const hasFullscreen = !!document.documentElement.requestFullscreen;
       const hasOrientationLock = !!(screen.orientation && screen.orientation.lock);
-      setIsSupported(hasFullscreen && hasOrientationLock);
+      const hasDeviceOrientation = typeof window.DeviceOrientationEvent !== 'undefined';
+      
+      setIsSupported(hasFullscreen && hasOrientationLock && hasDeviceOrientation);
 
       if (screen.orientation) {
         setOrientation(screen.orientation.type);
