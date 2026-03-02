@@ -9,21 +9,24 @@ export default function Home() {
   const [error, setError] = useState("");
   const [isAIPopupOpen, setIsAIPopupOpen] = useState(false);
   const [isPermissionGranted, setIsPermissionGranted] = useState(false);
+  const [isSupported, setIsSupported] = useState(true);
   
   // No manual ref needed, using closure-based flag in useEffect
 
   useEffect(() => {
-    if (typeof window !== "undefined" && screen.orientation) {
-      setOrientation(screen.orientation.type);
+    if (typeof window !== "undefined") {
+      const hasFullscreen = !!document.documentElement.requestFullscreen;
+      const hasOrientationLock = !!(screen.orientation && screen.orientation.lock);
+      setIsSupported(hasFullscreen && hasOrientationLock);
 
-      const handleOrientationChange = () => {
+      if (screen.orientation) {
         setOrientation(screen.orientation.type);
-        // Logical orientation change only happens when NOT locked
-        // But we keep this for consistency
-      };
-
-      screen.orientation.addEventListener("change", handleOrientationChange);
-      return () => screen.orientation.removeEventListener("change", handleOrientationChange);
+        const handleOrientationChange = () => {
+          setOrientation(screen.orientation.type);
+        };
+        screen.orientation.addEventListener("change", handleOrientationChange);
+        return () => screen.orientation.removeEventListener("change", handleOrientationChange);
+      }
     }
   }, []);
 
@@ -204,29 +207,35 @@ export default function Home() {
 
           <div className="h-px bg-zinc-800 w-full" />
 
-          <button
-            onClick={toggleLock}
-            className={`group/btn relative w-full py-4 rounded-2xl font-bold transition-all duration-300 flex items-center justify-center gap-3 overflow-hidden ${
-              isLocked 
-                ? 'bg-zinc-800 text-white hover:bg-zinc-700' 
-                : 'bg-white text-black hover:bg-zinc-200'
-            }`}
-          >
-            {isLocked ? (
-              <>
-                <Lock className="w-5 h-5" />
-                <span>Unlock Orientation</span>
-              </>
-            ) : (
-              <>
-                <Unlock className="w-5 h-5" />
-                <span>Lock Orientation</span>
-              </>
-            )}
-            
-            {/* Hover reflection effect */}
-            <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000" />
-          </button>
+          {isSupported ? (
+            <button
+              onClick={toggleLock}
+              className={`group/btn relative w-full py-4 rounded-2xl font-bold transition-all duration-300 flex items-center justify-center gap-3 overflow-hidden ${
+                isLocked 
+                  ? 'bg-zinc-800 text-white hover:bg-zinc-700' 
+                  : 'bg-white text-black hover:bg-zinc-200'
+              }`}
+            >
+              {isLocked ? (
+                <>
+                  <Lock className="w-5 h-5" />
+                  <span>Unlock Orientation</span>
+                </>
+              ) : (
+                <>
+                  <Unlock className="w-5 h-5" />
+                  <span>Lock Orientation</span>
+                </>
+              )}
+              
+              {/* Hover reflection effect */}
+              <div className="absolute inset-0 w-full h-full bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover/btn:translate-x-full transition-transform duration-1000" />
+            </button>
+          ) : (
+            <div className="bg-zinc-800/50 border border-zinc-700/50 py-4 rounded-2xl text-zinc-500 text-sm font-medium">
+              Orientation Lock is not supported on this browser.
+            </div>
+          )}
 
           {error && (
             <div className="flex items-center gap-2 text-red-400 text-sm justify-center bg-red-500/10 py-2 px-4 rounded-lg">
